@@ -1,0 +1,4 @@
+-r Voice-Privacy-Challenge-2020/requirements.txt
+-r IMSToucan/requirements.txt
+espnet
+espnet-model-zoo
