@@ -13,15 +13,30 @@ The system is based on the Voice Privacy Challenge 2020 which is included as sub
 speaker embedding anonymization with neural synthesis, and uses the data and evaluation framework of the challenge. 
 For a detailed description of the system, please read our paper linked above.
 
-![architecture](../speaker-anonymization/figures/architecture.png)
+![architecture](figures/architecture.png)
 
 
 ## Installation
+### 1. Clone repository
 Clone this repository with all its submodules:
 ```
 git clone --recurse-submodules https://github.com/DigitalPhonetics/speaker-anonymization.git
 ``` 
 
+### 2. Download models
+Download the models [from the release page (v1.0)](https://github.com/DigitalPhonetics/speaker-anonymization/releases/tag/v1.0), unzip the folders and place them into a *models* folder as stated in the release notes. Make sure to not unzip the single ASR models, only the outer folder.
+```
+cd speaker-anonymization
+mkdir models
+cd models
+for file in anonymization asr tts; do
+    wget https://github.com/DigitalPhonetics/speaker-anonymization/releases/download/v1.0/${file}.zip
+    unzip ${file}.zip
+    rm ${file}.zip
+done
+```
+
+### 3. Install challenge framework
 In order to be able to use the framework of the Voice Privacy Challenge 2020 for evaluation, you need to install it 
 first. According to [the challenge repository](https://github.com/Voice-Privacy-Challenge/Voice-Privacy-Challenge-2020), this should simply be
 ```
@@ -36,6 +51,7 @@ very possible that those would not directly work on your system and would need t
 **Note: this step will download and install Kaldi, and might lead to complications. Additionally, make sure that you 
 are running the install script on a device with access to GPUs and CUDA.**
 
+### 4. Install requirements
 Additionally, install the [requirements](requirements.txt) (in the base directory of this repository):
 ```
 pip install -r requirements.txt
