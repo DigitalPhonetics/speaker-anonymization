@@ -6,7 +6,7 @@ Phonetic Intermediate Representations*](https://arxiv.org/abs/2207.04834) that w
 published at 
 Interspeech 2022. 
 
-**In addition to the code, we are going to provide a live demo soon.**
+**Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
 
 ## System Description
 The system is based on the Voice Privacy Challenge 2020 which is included as submodule. It uses the basic idea of 
