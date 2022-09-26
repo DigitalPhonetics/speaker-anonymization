@@ -2,9 +2,7 @@
 
 This repository contains the speaker anonymization system developed at the Institute for Natural Language Processing 
 (IMS) at the University of Stuttgart, Germany. The system is described in our paper [*Speaker Anonymization with 
-Phonetic Intermediate Representations*](https://arxiv.org/abs/2207.04834) that will be 
-published at 
-Interspeech 2022. 
+Phonetic Intermediate Representations*](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html).
 
 **Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
 
@@ -135,3 +133,15 @@ models that are used in the main configuration of the system.
 |        |        | trained_on_asr_phoneme_outputs.pt | Libri100 + finetuned |
 |        |        | trained_on_libri600_asr_phoneme_outputs.pt | Libri600 |
 |        |        | trained_on_libri600_ground_truth_phonemes.pt | Libri600 + finetuned |
+
+## Citation
+```
+@inproceedings{meyer22b_interspeech,
+  author={Sarina Meyer and Florian Lux and Pavel Denisov and Julia Koch and Pascal Tilli and Ngoc Thang Vu},
+  title={{Speaker Anonymization with Phonetic Intermediate Representations}},
+  year=2022,
+  booktitle={Proc. Interspeech 2022},
+  pages={4925--4929},
+  doi={10.21437/Interspeech.2022-10703}
+}
+```
