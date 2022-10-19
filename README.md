@@ -6,6 +6,10 @@ Phonetic Intermediate Representations*](https://www.isca-speech.org/archive/inte
 
 **Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
 
+**Check also out [our contribution](https://www.voiceprivacychallenge.org/results-2022/docs/3___T04.pdf) to the [Voice Privacy Challenge 2022](https://www.voiceprivacychallenge.org/results-2022/)!**
+
+**The code and live demo to our latest paper [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://arxiv.org/abs/2210.07002) is going to be added soon.**
+
 ## System Description
 The system is based on the Voice Privacy Challenge 2020 which is included as submodule. It uses the basic idea of 
 speaker embedding anonymization with neural synthesis, and uses the data and evaluation framework of the challenge. 
