@@ -1,3 +1,5 @@
+**This directory is a reduced part of our IMS Toucan Speech Synthesis toolkit. [Click here](https://github.com/DigitalPhonetics/IMS-Toucan) to check out the full version!**
+---
 ![image](Utility/toucan.png)
 
 IMS Toucan is a toolkit for teaching, training and using state-of-the-art Speech Synthesis models, developed at the
