@@ -1,7 +1,3 @@
 [submodule "Voice-Privacy-Challenge-2020"]
 	path = Voice-Privacy-Challenge-2020
 	url = https://github.com/Voice-Privacy-Challenge/Voice-Privacy-Challenge-2020
-[submodule "IMS-Toucan"]
-	path = IMSToucan
-	url = https://github.com/Flux9665/IMS-Toucan
-	branch = vp_inference/1912a835c4b3de20f5190797e684f10aa45a76d9
