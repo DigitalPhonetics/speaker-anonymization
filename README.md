@@ -1,22 +1,52 @@
 # Speaker Anonymization
 
 This repository contains the speaker anonymization system developed at the Institute for Natural Language Processing 
-(IMS) at the University of Stuttgart, Germany. The system is described in our paper [*Speaker Anonymization with 
-Phonetic Intermediate Representations*](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html).
+(IMS) at the University of Stuttgart, Germany. The system is described in the following papers:
+
+| Paper | Published at | Branch | Demo |
+|-------|--------------|--------|------|
+| [Speaker Anonymization with Phonetic Intermediate Representations](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html) | [Interspeech 2022](https://www.interspeech2022.org/) | [phonetic_representations](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations) | [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization) |
+| [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://arxiv.org/abs/2210.07002) | Soon at [SLT 2022](https://slt2022.org/) | coming soon | coming soon |
+
+If you want to see the code to the respective papers, go to the branch referenced in the table. The latest version 
+of our system can be found here on the main branch.
 
 **Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
 
 **Check also out [our contribution](https://www.voiceprivacychallenge.org/results-2022/docs/3___T04.pdf) to the [Voice Privacy Challenge 2022](https://www.voiceprivacychallenge.org/results-2022/)!**
 
-**The code and live demo to our latest paper [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://arxiv.org/abs/2210.07002) is going to be added soon.**
 
 ## System Description
 The system is based on the Voice Privacy Challenge 2020 which is included as submodule. It uses the basic idea of 
 speaker embedding anonymization with neural synthesis, and uses the data and evaluation framework of the challenge. 
-For a detailed description of the system, please read our paper linked above.
+For a detailed description of the system, please read our Interspeech paper linked above.
+
+### Added Features
+Since the publication of the first paper, some features have been added. The new structure of the pipeline and its 
+capabilities contain:
+* **GAN-based speaker anonymization**: We show in [this paper](https://arxiv.org/abs/2210.07002) that a Wasserstein 
+  GAN can be trained to generate artificial speaker embeddings that resemble real ones but are not connected to any 
+  known speaker -- in our opinion, a crucial condition for anonymization. The current GAN model in the latest 
+  release v2.0 has been trained to generate a custom type of 128-dimensional speaker embeddings (included also in our 
+  speech 
+  synthesis toolkit [IMSToucan](https://github.com/DigitalPhonetics/IMS-Toucan)) instead of x-vectors or ECAPA-TDNN 
+  embeddings.
+* **Prosody cloning**: We now provide an option to transfer the original prosody to the anonymized audio via [prosody 
+  cloning](https://arxiv.org/abs/2206.12229)! If you want to avoid an exact cloning but modify it slightly (but 
+  randomly to avoid reversability), use the random offset thresholds. They are given as lower and upper threshold, 
+  as an percentage in relation to the modification. For instance, if you give these thresholds as (80, 120), you 
+  will modify the pitch and energy values of each phone by multiplying it with a random value between 80% and 120% 
+  (leading to either weakening or amplifying the signal).
+* **ASR**: Our ASR is now using a [Branchformer](https://arxiv.org/abs/2207.02971) encoder and includes word 
+  boundaries and stress markers in its output.
 
 ![architecture](figures/architecture.png)
 
+The current code on the main branch expects the models of release v2.0. If you want to use the pipeline as presented at 
+Interspeech 2022, 
+please go to 
+the 
+[phonetic_representations branch](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations).
 
 ## Installation
 ### 1. Clone repository
@@ -26,13 +56,14 @@ git clone --recurse-submodules https://github.com/DigitalPhonetics/speaker-anony
 ``` 
 
 ### 2. Download models
-Download the models [from the release page (v1.0)](https://github.com/DigitalPhonetics/speaker-anonymization/releases/tag/v1.0), unzip the folders and place them into a *models* folder as stated in the release notes. Make sure to not unzip the single ASR models, only the outer folder.
+Download the models [from the release page (v2.0)](https://github.com/DigitalPhonetics/speaker-anonymization/releases/tag/v2.0), unzip the folders and place them into a *models* 
+folder as stated in the release notes. Make sure to not unzip the single ASR models, only the outer folder.
 ```
 cd speaker-anonymization
 mkdir models
 cd models
 for file in anonymization asr tts; do
-    wget https://github.com/DigitalPhonetics/speaker-anonymization/releases/download/v1.0/${file}.zip
+    wget https://github.com/DigitalPhonetics/speaker-anonymization/releases/download/v2.0/${file}.zip
     unzip ${file}.zip
     rm ${file}.zip
 done
@@ -98,7 +129,8 @@ on CPU (not recommended).
 The script will anonymize the development and test data of LibriSpeech and VCTK in three steps:
 1. ASR: Recognition of the linguistic content, output in form of text or phone sequences
 2. Anonymization: Modification of speaker embeddings, output as torch vectors
-3. TTS: Synthesis based on recognized transcription and anonymized speaker embedding, output as audio files (wav)
+3. TTS: Synthesis based on recognized transcription, extracted prosody and anonymized speaker embedding, output as 
+   audio files (wav)
 
 Each module produces intermediate results that are saved to disk. A module is only executed if previous intermediate 
 results for dependent pipeline combination do not exist or if recomputation is forced. Otherwise, the previous 
@@ -118,25 +150,6 @@ preparation steps and then executes the evaluation part of the challenge run scr
 Finally, for clarity, the most important parts of the evaluation results as well as the used settings are copied to 
 the [results](results) directory.
 
-
-## Models
-The following table lists all models for each module that are reported in the paper and are included in this 
-repository. Each model is given by its name in the directory and the name used in the paper. In the *settings* 
-dictionary in [run_inference.py](run_inference.py), the model name should be used. The *x* for default names the 
-models that are used in the main configuration of the system.
-
-| Module | Default| Model name | Name in paper|
-|--------|--------|------------|--------------|
-| ASR    | x      | asr_tts-phn_en.zip | phones |
-|        |        | asr_stt_en | STT          |
-|        |        | asr_tts_en.zip | TTS       |
-| Anonymization | x | pool_minmax_ecapa+xvector | pool |
-|        |        | pool_raw_ecapa+xvector | pool raw |
-|        |        | random_in-scale_ecapa+xvector | random |
-| TTS    | x      | trained_on_ground_truth_phonemes.pt| Libri100|
-|        |        | trained_on_asr_phoneme_outputs.pt | Libri100 + finetuned |
-|        |        | trained_on_libri600_asr_phoneme_outputs.pt | Libri600 |
-|        |        | trained_on_libri600_ground_truth_phonemes.pt | Libri600 + finetuned |
 
 ## Citation
 ```

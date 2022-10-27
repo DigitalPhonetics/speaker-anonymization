@@ -10,6 +10,7 @@ class BaseAnonymizer:
         # Base class for speaker embedding anonymization.
         self.vec_type = vec_type
         self.emb_level = emb_level
+        self.embed_model_path = Path('pretrained_models')
 
         if isinstance(device, torch.device):
             self.device = device

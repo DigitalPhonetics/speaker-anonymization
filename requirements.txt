@@ -2,3 +2,5 @@
 -r IMSToucan/requirements.txt
 espnet
 espnet-model-zoo
+cvxopt
+tqdm

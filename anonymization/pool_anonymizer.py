@@ -59,7 +59,7 @@ class PoolAnonymizer(BaseAnonymizer):
         if not self.pool_embeddings:
             print('Compute speaker embeddings for speaker pool...')
             self.pool_embeddings = SpeakerEmbeddings(vec_type=self.vec_type, emb_level='spk', device=self.device)
-            self.pool_embeddings.extract_vectors_from_audio(self.pool_data_dir)
+            self.pool_embeddings.extract_vectors_from_audio(self.pool_data_dir, model_path=self.embed_model_path)
             self.pool_genders = {gender: [i for i, spk_gender in enumerate(self.pool_embeddings.genders)
                                           if spk_gender == gender] for gender in set(self.pool_embeddings.genders)}
         if self.distance == 'plda' and not self.plda:

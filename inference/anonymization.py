@@ -3,21 +3,20 @@ import numpy as np
 import torch
 from sklearn.preprocessing import minmax_scale, StandardScaler
 
-from anonymization import PoolAnonymizer, RandomAnonymizer
-from utils import create_clean_dir
+from anonymization import PoolAnonymizer, RandomAnonymizer, GANAnonymizer
 
 
 ANON_MODELS = {
     'pool': PoolAnonymizer,
-    'random': RandomAnonymizer
+    'random': RandomAnonymizer,
+    'gan': GANAnonymizer
 }
 
 
 class InferenceAnonymizer:
 
-    def __init__(self, model_name, data_dir, results_dir, model_dir, vectors_dir, device, force_compute=False):
-        self.force_compute = force_compute
-        self.results_dir = results_dir / 'speaker_embeddings' / model_name
+    def __init__(self, model_name, data_dir, vectors_dir, results_dir, model_dir, device):
+        self.results_dir = results_dir
         self.data_dir = data_dir
         self.vectors_dir = vectors_dir
         self.device = device
@@ -27,9 +26,9 @@ class InferenceAnonymizer:
         self.dim_ranges = self._load_dim_ranges(model_dir / 'anonymization' / model_name)
         self.anonymizer = self._load_anonymizer(model_dir / 'anonymization' / model_name)
 
-    def anonymize_embeddings(self, dataset):
+    def anonymize_embeddings(self, dataset, emb_level='spk'):
         dataset_results_dir = self.results_dir / dataset
-        if dataset_results_dir.exists() and any(dataset_results_dir.iterdir()) and not self.force_compute:
+        if dataset_results_dir.exists() and any(dataset_results_dir.iterdir()):
             # if there are already anonymized speaker embeddings from this model and the computation is not forces,
             # simply load them
             print('No computation of anonymized embeddings necessary; load existing anonymized speaker embeddings '
@@ -40,10 +39,10 @@ class InferenceAnonymizer:
             # otherwise, create new anonymized speaker embeddings
             print('Anonymize speaker embeddings...')
             anon_embeddings = self.anonymizer.anonymize_data(self.data_dir / dataset,
-                                                             vector_dir=self.vectors_dir / dataset)
+                                                             vector_dir=self.vectors_dir / dataset, emb_level=emb_level)
             if self.dim_ranges:
                 anon_embeddings = self._scale_embeddings(anon_embeddings)
-            create_clean_dir(dataset_results_dir)  # deletes existing results files
+            dataset_results_dir.mkdir(exist_ok=True)
             self.anonymizer.save_embeddings(anon_embeddings, dataset_results_dir)
             return anon_embeddings, True
 
@@ -58,6 +57,9 @@ class InferenceAnonymizer:
 
         if 'pool' in model_name:
             model_type = 'pool'
+        elif 'gan' in model_name:
+            model_type = 'gan'
+            self.dim_ranges = None
         else:
             model_type = 'random'
 
