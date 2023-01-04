@@ -14,11 +14,7 @@ def create_result_folders(settings, force_compute, results_dir):
     khz = f'{settings["output_sr"] // 1000}kHz'
     anon_model_name = settings['anonymizer']
     asr_model_name = settings['asr']
-    lower_offset, higher_offset = settings["prosody_offsets"]
-    offsets = f'_offsets{lower_offset}-{higher_offset}' if lower_offset is not None and higher_offset is not None and \
-                                                           settings['clone_prosody'] else ''
-    tts_model_name = f'{settings["tts_hifigan"]}_{settings["tts_fastspeech"]}' \
-                     f'{"_cloned-prosody" if settings["clone_prosody"] else ""}{offsets}_{khz}'
+    tts_model_name = f'{settings["tts_hifigan"]}_{settings["tts_fastspeech"]}_{khz}'
 
     # anon
     anon_results_dir = results_dir / 'speaker_embeddings' / anon_model_name
@@ -49,12 +45,9 @@ def run_pipeline(device, settings, datasets, dirs):
                        results_dir=dirs['results']['asr'])
     tts = InferenceTTS(hifigan_model_name=settings['tts_hifigan'], fastspeech_model_name=settings['tts_fastspeech'],
                        model_dir=dirs['models'], results_dir=dirs['results']['tts'], device=device,
-                       data_dir=dirs['data'], output_sr=settings['output_sr'], clone_prosody=settings['clone_prosody'],
-                       aligner_model_name=settings['tts_aligner'], embedding_model_name=settings['tts_embedding'])
+                       data_dir=dirs['data'], output_sr=settings['output_sr'])
 
     anon_wav_scps = {}
-
-    random_offset_lower, random_offset_higher = settings['prosody_offsets']
 
     for i, dataset in enumerate(datasets):
         print(f'{i + 1}/{len(datasets)}: Processing {dataset}...')
@@ -62,8 +55,7 @@ def run_pipeline(device, settings, datasets, dirs):
         texts, utt2spk, new_text = asr.recognize_speech(dataset=dataset)
         wav_scp, _ = tts.read_texts(dataset=dataset, texts=texts, anon_embeddings=anon_embeddings, utt2spk=utt2spk,
                                     force_compute=(new_anon or new_text),
-                                    text_is_phonemes=settings['text_is_phonemes'],
-                                    random_offset_lower=random_offset_lower, random_offset_higher=random_offset_higher)
+                                    text_is_phonemes=settings['text_is_phonemes'])
         anon_wav_scps[dataset] = wav_scp
         print('Done')
     return anon_wav_scps
@@ -78,16 +70,11 @@ if __name__ == '__main__':
     # Settings
     gpu = args.gpu     # None for CPU, integer for GPU ID
     settings = {
-        'datasets': ['libri_test', 'vctk_dev', 'vctk_test'],
-        'anonymizer': 'gan_style-embed',  # name of anonymization model
-        'asr': 'asr_branchformer_tts-phn_en.zip',  # name of ASR model
+        'datasets': ['libri_dev', 'libri_test', 'vctk_dev', 'vctk_test'],
+        'anonymizer': 'gan',  # name of anonymization model
+        'asr': 'asr_improved_tts-phn_en.zip',  # name of ASR model
         'tts_hifigan': 'best.pt',  # name of TTS HiFiGAN model
-        'tts_fastspeech': 'prosody_cloning.pt',  # name of TTS FastSpeech2 model
-        'tts_aligner': 'aligner.pt',  # name of TTS aligner
-        'tts_embedding': 'embedding_function.pt',  # name of speaker embedding function
-        'clone_prosody': True,
-        'prosody_offsets': (None, None),  # (lower_threshold, higher_threshold), given in relation to 100%
-        # e.g. (80, 120) means that the signal can be weakened or amplified by up to 20%
+        'tts_fastspeech': 'trained_on_ground_truth_phonemes.pt',  # name of TTS FastSpeech2 model
         'output_sr': 48000
     }
     force_compute = []  # options: 'anon', 'asr', 'tts'

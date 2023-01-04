@@ -16,7 +16,8 @@ class EmbeddingsGenerator:
         self._load_model(self.gan_path)
 
     def generate_embeddings(self, n=1000):
-        return self.wgan.sample_generator(num_samples=n, nograd=True, return_intermediate=False)
+        samples = self.wgan.sample_generator(num_samples=n, nograd=True)
+        return self._inverse_normalize(samples, self.mean, self.std)
 
     def _load_model(self, path):
         gan_checkpoint = torch.load(path, map_location="cpu")
@@ -27,4 +28,9 @@ class EmbeddingsGenerator:
 
         self.mean = gan_checkpoint["mean"]
         self.std = gan_checkpoint["std"]
+
+    def _inverse_normalize(self, tensor, mean, std):
+        for t, m, s in zip(tensor, mean, std):
+            t.mul_(s).add_(m)
+        return tensor
 

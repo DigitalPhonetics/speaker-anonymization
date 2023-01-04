@@ -7,7 +7,7 @@ from torch import nn
 
 class ResNet_G(nn.Module):
 
-    def __init__(self, data_dim, z_dim, size, nfilter=64, nfilter_max=512, bn=True, res_ratio=0.1, **kwargs):
+    def __init__(self, z_dim, size, nfilter=64, nfilter_max=512, bn=True, res_ratio=0.1, **kwargs):
         super().__init__()
         self.input_dim = z_dim
         self.output_dim = z_dim
@@ -47,16 +47,14 @@ class ResNet_G(nn.Module):
         self.resnet = nn.Sequential(*blocks)
         self.conv_img = nn.Conv2d(nf, 3, 3, padding=1)
 
-        self.fc_out = nn.Linear(3 * size * size, data_dim)
+        self.fc_out = nn.Linear(3 * size * size, 704)
 
-    def forward(self, z, return_intermediate=False):
+    def forward(self, z):
         batch_size = z.size(0)
         out = self.fc(z)
         if self.bn:
             out = self.bn1d(out)
         out = self.relu(out)
-        if return_intermediate:
-            l_1 = out.detach().clone()
         out = out.view(batch_size, self.nf0, self.s0, self.s0)
 
         out = self.resnet(out)
@@ -66,8 +64,6 @@ class ResNet_G(nn.Module):
         out.flatten(1)
         out = self.fc_out(out.flatten(1))
 
-        if return_intermediate:
-            return out, l_1
         return out
 
     def sample_latent(self, n_samples, z_size):
@@ -76,7 +72,7 @@ class ResNet_G(nn.Module):
 
 class ResNet_D(nn.Module):
 
-    def __init__(self, data_dim, size, nfilter=64, nfilter_max=512, res_ratio=0.1):
+    def __init__(self, z_dim, size, nfilter=64, nfilter_max=512, res_ratio=0.1):
         super().__init__()
         s0 = self.s0 = 4
         nf = self.nf = nfilter
@@ -94,7 +90,7 @@ class ResNet_D(nn.Module):
             ResNetBlock(nf0, nf1, bn=False, res_ratio=res_ratio)
             ]
 
-        self.fc_input = nn.Linear(data_dim, 3 * size * size)
+        self.fc_input = nn.Linear(704, 3 * size * size)
 
         for i in range(1, nlayers + 1):
             nf0 = min(nf * 2 ** i, nf_max)

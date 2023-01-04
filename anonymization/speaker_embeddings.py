@@ -8,11 +8,9 @@ import pyloudnorm as pyln
 from speechbrain.pretrained import EncoderClassifier
 
 from utils import read_kaldi_format, save_kaldi_format
-from IMSToucan.TrainingInterfaces.Spectrogram_to_Embedding.StyleEmbedding import StyleEmbedding
-from IMSToucan.Preprocessing.AudioPreprocessor import AudioPreprocessor
 
 
-VALID_VEC_TYPES = {'xvector', 'ecapa', 'ecapa+xvector', 'style-embed'}
+VALID_VEC_TYPES = {'xvector', 'ecapa', 'ecapa+xvector'}
 
 
 class SpeakerEmbeddings:
@@ -53,9 +51,6 @@ class SpeakerEmbeddings:
         # it in the corresponding savedir. If a model has been previously downloaded and stored already,
         # it is loaded from savedir instead of downloading it again.
         encoders = []
-        if self.vec_type == 'style-embed':
-            self._extract_style_embeddings_from_audio(data_dir=data_dir, model_path=model_path)
-            return
 
         if 'ecapa' in self.vec_type:
             encoders.append(EncoderClassifier.from_hparams(source='speechbrain/spkrec-ecapa-voxceleb',
@@ -227,53 +222,3 @@ class SpeakerEmbeddings:
             wave = torchaudio.transforms.Resample(orig_freq=sr, new_freq=16000).to(self.device)(wave)
 
         return wave.cpu()
-
-    def _extract_style_embeddings_from_audio(self, data_dir: Path, model_path: Path):
-        encoder = StyleEmbedding()
-        check_dict = torch.load(model_path, map_location='cpu')
-        encoder.load_state_dict(check_dict['style_emb_func'])
-        encoder.to(self.device)
-
-        audio_preprocessor = AudioPreprocessor(input_sr=16000, output_sr=16000, cut_silence=True, device=self.device)
-
-        recordings = read_kaldi_format(data_dir / 'wav.scp')
-        utt2spk = read_kaldi_format(data_dir / 'utt2spk')
-        spk2gender = read_kaldi_format(data_dir / 'spk2gender')
-
-        spk2utt_ids = defaultdict(list)
-        vectors = []
-
-        i = 0
-        for rec_name, rec_file in recordings.items():
-            if self.emb_level == 'utt':
-                speaker = rec_name
-            else:  # speaker-level anonymization
-                speaker = utt2spk[rec_name]
-            self.utt2spk[rec_name] = utt2spk[rec_name]
-            signal, fs = torchaudio.load(rec_file)
-            if fs != audio_preprocessor.sr:
-                audio_preprocessor = AudioPreprocessor(input_sr=fs, output_sr=16000, cut_silence=True,
-                                                       device=self.device)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                norm_wave = self._normalize_wave(wave=signal, sr=fs).to(self.device)
-                norm_wave = audio_preprocessor.cut_silence_from_audio(norm_wave).cpu()
-                spec = audio_preprocessor.logmelfilterbank(norm_wave, 16000).transpose(0, 1)
-                spec_len = torch.LongTensor([len(spec)])
-                vector = encoder(spec.unsqueeze(0).to(self.device), spec_len.unsqueeze(0).to(self.device)).squeeze().detach()
-
-            spk2utt_ids[speaker].append(i)
-            vectors.append(vector)
-
-            i += 1
-
-        if self.emb_level == 'utt':
-            self.speakers = {speaker: id_list[0] for speaker, id_list in spk2utt_ids.items()}
-            self.speaker_vectors = torch.stack(vectors, dim=0).to(self.device)
-            spk2gender = {utt: spk2gender[speaker] for utt, speaker in utt2spk.items()}
-        else:
-            self.speakers, self.speaker_vectors = self._get_speaker_level_vectors(spk2utt_ids, torch.stack(
-                vectors, dim=0).to(self.device))
-        self.genders = [spk2gender[speaker] for speaker in self.speakers]
-        self.idx2speakers = {idx: spk for spk, idx in self.speakers.items()}
-        

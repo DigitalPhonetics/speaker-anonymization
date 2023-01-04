@@ -5,7 +5,7 @@ import resampy
 import torch
 from espnet_model_zoo.downloader import ModelDownloader
 
-from utils import create_clean_dir, read_kaldi_format, save_kaldi_format
+from utils import read_kaldi_format, save_kaldi_format
 
 
 class InferenceASR:
@@ -68,7 +68,7 @@ class InferenceASR:
 
                     nbests = self.speech2text(speech)
                     text, *_ = nbests[0]
-                    texts[utt] = '~' + text + '~#'  # add pause at beginning and end of utterance
+                    texts[utt] = text
                 i += 1
                 if i % 1000 == 0 and not utterance_list:
                     save_kaldi_format(texts, dataset_results_dir / f'text')

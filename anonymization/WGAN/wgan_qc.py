@@ -235,7 +235,7 @@ class WassersteinGanQuadraticCost:
 
         return self
 
-    def sample_generator(self, num_samples, nograd=False, return_intermediate=False):
+    def sample_generator(self, num_samples, nograd=False):
         self.G.eval()
         if isinstance(self.G, torch.nn.parallel.DataParallel):
             latent_samples = self.G.module.sample_latent(num_samples, self.G.module.z_dim)
@@ -244,12 +244,10 @@ class WassersteinGanQuadraticCost:
         latent_samples = latent_samples.to(self.device)
         if nograd:
             with torch.no_grad():
-                generated_data = self.G(latent_samples, return_intermediate=return_intermediate)
+                generated_data = self.G(latent_samples)
         else:
             generated_data = self.G(latent_samples)
         self.G.train()
-        if return_intermediate:
-            return generated_data[0].detach(), generated_data[1], latent_samples
         return generated_data.detach()
 
     def sample(self, num_samples):

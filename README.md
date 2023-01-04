@@ -1,52 +1,84 @@
 # Speaker Anonymization
 
 This repository contains the speaker anonymization system developed at the Institute for Natural Language Processing 
-(IMS) at the University of Stuttgart, Germany. The system is described in the following papers:
+(IMS) at the University of Stuttgart, Germany.
 
-| Paper | Published at | Branch | Demo |
-|-------|--------------|--------|------|
-| [Speaker Anonymization with Phonetic Intermediate Representations](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html) | [Interspeech 2022](https://www.interspeech2022.org/) | [phonetic_representations](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations) | [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization) |
-| [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://arxiv.org/abs/2210.07002) | Soon at [SLT 2022](https://slt2022.org/) | coming soon | coming soon |
+This branch contains the code for our paper [Anonymizing Speech with Generative Adversarial Networks to Preserve 
+Speaker Privacy](https://arxiv.org/abs/2210.07002) which we will present soon at the [SLT 2022](https://slt2022.org/)
+. It is an extension of our first anonymization system described in [Speaker Anonymization with Phonetic 
+Intermediate Representations](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html) but 
+uses a Wasserstein Generative Adversarial Network to generate artificial target speakers. 
 
-If you want to see the code to the respective papers, go to the branch referenced in the table. The latest version 
-of our system can be found here on the main branch.
+If you want to see a list of all papers and implementations within this project, please visit the [main branch](https://github.com/DigitalPhonetics/speaker-anonymization/tree/main).
 
-**Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
+[comment]: <> (**Check out the live demo to this code on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization]&#40;https://huggingface.co/spaces/sarinam/speaker-anonymization&#41;**)
 
-**Check also out [our contribution](https://www.voiceprivacychallenge.org/results-2022/docs/3___T04.pdf) to the [Voice Privacy Challenge 2022](https://www.voiceprivacychallenge.org/results-2022/)!**
+This implementation is similar to [our submission](https://www.voiceprivacychallenge.org/results-2022/docs/3___T04.pdf)
+to the 
+[Voice Privacy Challenge 2022](https://www.voiceprivacychallenge.org/results-2022/).
 
 
 ## System Description
 The system is based on the Voice Privacy Challenge 2020 which is included as submodule. It uses the basic idea of 
 speaker embedding anonymization with neural synthesis, and uses the data and evaluation framework of the challenge. 
-For a detailed description of the system, please read our Interspeech paper linked above.
+For detailed descriptions of the system, please read our papers linked above.
 
 ### Added Features
-Since the publication of the first paper, some features have been added. The new structure of the pipeline and its 
-capabilities contain:
-* **GAN-based speaker anonymization**: We show in [this paper](https://arxiv.org/abs/2210.07002) that a Wasserstein 
-  GAN can be trained to generate artificial speaker embeddings that resemble real ones but are not connected to any 
-  known speaker -- in our opinion, a crucial condition for anonymization. The current GAN model in the latest 
-  release v2.0 has been trained to generate a custom type of 128-dimensional speaker embeddings (included also in our 
-  speech 
-  synthesis toolkit [IMSToucan](https://github.com/DigitalPhonetics/IMS-Toucan)) instead of x-vectors or ECAPA-TDNN 
-  embeddings.
-* **Prosody cloning**: We now provide an option to transfer the original prosody to the anonymized audio via [prosody 
-  cloning](https://arxiv.org/abs/2206.12229)! If you want to avoid an exact cloning but modify it slightly (but 
-  randomly to avoid reversability), use the random offset thresholds. They are given as lower and upper threshold, 
-  as an percentage in relation to the modification. For instance, if you give these thresholds as (80, 120), you 
-  will modify the pitch and energy values of each phone by multiplying it with a random value between 80% and 120% 
-  (leading to either weakening or amplifying the signal).
-* **ASR**: Our ASR is now using a [Branchformer](https://arxiv.org/abs/2207.02971) encoder and includes word 
-  boundaries and stress markers in its output.
+The system is an extension of our first anonymization pipeline described in [our Interspeech paper](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html).
+Given an input audio, two kinds of information are extracted: (a) the linguistic content in form of phone sequences 
+using a custom Speech Recognition (ASR) model, and (b) a vector encoding the speaker information as speaker 
+embedding, formed by a concatenation of x-vector and ECAPA-TDNN embeddings. Using a 
+previously trained Wasserstein GAN to convert random noise into natural-like yet artificial speaker vectors, we 
+randomly sample a new target speaker embedding. If this target vector is dissimilar enough from the original speaker 
+embedding (b) - measured by cosine distance -, we use this target speaker and the phone sequence (a) to resynthesize 
+the utterance with a custom Speech Synthesis model, resulting in an anonymous version of the original audio. 
+
+In the extension described in [this paper](https://arxiv.org/abs/2210.07002), we mainly use the same pipeline and 
+models as in the first version of the system (see the branch [phonetic_representations](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations)). However, the ASR model has been further 
+improved by hyperparameter optimization, and the GAN-based anonymization has been introduced as a novel speaker 
+selection/generation method.
 
 ![architecture](figures/architecture.png)
 
-The current code on the main branch expects the models of release v2.0. If you want to use the pipeline as presented at 
-Interspeech 2022, 
-please go to 
-the 
-[phonetic_representations branch](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations).
+The current code on the main branch expects the models of release v1.2. Please make sure to download these models 
+before running the code.
+
+### Wasserstein GAN
+The Generative Adversarial Network (GAN) is trained to minimize the Wasserstein distance between the original and 
+generated distribution, hence called Wasserstein GAN, or WGAN. It consists of two parts: a generator that converts 
+random noise into a vector of the same shape as our speaker embeddings, and a critic which is responsible for 
+decreasing the distance. Since unlike to vanilla GANs, our discriminator (the critic) does not decide between real or 
+fake data points but instead compares their distribution, we reduce the chance of common problems like mode collaps and 
+the imitation of training data points. To further increase the chance of convergence (another common problem with GANs), 
+we train the model with Quadratic Transport Cost. 
+
+During training, we compare the vectors generated by our network to the speaker embeddings of real speakers which 
+where extracted on utterance level, meaning that one speaker is represented in this speaker pool as many times as we 
+consider utterances from this speaker. In this way, we increase the number of data points in our training data. 
+However, GANs are usually trained on larger datasets than the ones considered in the framework of the Voice Privacy 
+Challenge, which we follow, and on image data which higher dimensions than speaker embeddings. Therefore, we reduced 
+the size of the input noise and the size of the generator and critic ResNet models. More information about this and 
+our hyperparameter selection is given in our paper.
+
+During inference, we simply generate a vector using our GAN (or sample one vector of pre-generated vectors) and 
+compare it to the speaker embedding of the input speaker. If both vectors have a cosine distance of at least 0.3, we 
+consider both vectors (i.e. speakers) as dissimilar enough and take the generated one as target speaker embedding.
+
+If you want to know more about the specifics of this GAN architecture and training, read the original papers about 
+[GANs](https://arxiv.org/abs/1406.2661), [Wasserstein GANs](https://proceedings.mlr.press/v70/arjovsky17a.html) and 
+their [improvements](https://arxiv.org/abs/1704.00028), and [Wasserstein GANs with Quadratic Transport Cost](https://ieeexplore.ieee.org/document/9009084).
+
+
+### ASR optimization
+We achieved an improvement of our ASR model by applying the following changes:
+
+1. Proportion of Encoder CTC loss during training is 0.6 instead of 0.3, and proportion of Decoder Cross Entropy loss is 0.4 instead of 0.7, meaning more priority for having phone-discriminating representations in the Encoder's output.
+
+2. Gradient accumulation during training is 8 steps instead of 4, meaning larger virtual batch size.
+
+3. Proportion of CTC score during inference is 0.2 instead of 0.4, meaning that slightly less information is used from the input represented by Encoder and slightly more information is used from the language patterns learned by Decoder.
+
+4. Inference is using average of 10 best checkpoints (by Decoder's accuracy on validation data) instead of 1, usually this makes the model less biased towards the validation set resulting in the better generalization on unseen data.
 
 ## Installation
 ### 1. Clone repository
@@ -56,14 +88,14 @@ git clone --recurse-submodules https://github.com/DigitalPhonetics/speaker-anony
 ``` 
 
 ### 2. Download models
-Download the models [from the release page (v2.0)](https://github.com/DigitalPhonetics/speaker-anonymization/releases/tag/v2.0), unzip the folders and place them into a *models* 
+Download the models [from the release page (v1.2)](https://github.com/DigitalPhonetics/speaker-anonymization/releases/tag/v1.2), unzip the folders and place them into a *models* 
 folder as stated in the release notes. Make sure to not unzip the single ASR models, only the outer folder.
 ```
 cd speaker-anonymization
 mkdir models
 cd models
 for file in anonymization asr tts; do
-    wget https://github.com/DigitalPhonetics/speaker-anonymization/releases/download/v2.0/${file}.zip
+    wget https://github.com/DigitalPhonetics/speaker-anonymization/releases/download/v1.2/${file}.zip
     unzip ${file}.zip
     rm ${file}.zip
 done
@@ -129,7 +161,7 @@ on CPU (not recommended).
 The script will anonymize the development and test data of LibriSpeech and VCTK in three steps:
 1. ASR: Recognition of the linguistic content, output in form of text or phone sequences
 2. Anonymization: Modification of speaker embeddings, output as torch vectors
-3. TTS: Synthesis based on recognized transcription, extracted prosody and anonymized speaker embedding, output as 
+3. TTS: Synthesis based on recognized transcription and anonymized speaker embedding, output as 
    audio files (wav)
 
 Each module produces intermediate results that are saved to disk. A module is only executed if previous intermediate 
@@ -151,14 +183,24 @@ Finally, for clarity, the most important parts of the evaluation results as well
 the [results](results) directory.
 
 
-## Citation
-```
-@inproceedings{meyer22b_interspeech,
-  author={Sarina Meyer and Florian Lux and Pavel Denisov and Julia Koch and Pascal Tilli and Ngoc Thang Vu},
-  title={{Speaker Anonymization with Phonetic Intermediate Representations}},
-  year=2022,
-  booktitle={Proc. Interspeech 2022},
-  pages={4925--4929},
-  doi={10.21437/Interspeech.2022-10703}
-}
-```
+[comment]: <> (## Citation)
+
+[comment]: <> (```)
+
+[comment]: <> (@inproceedings{meyer_2023_anonymizing,)
+
+[comment]: <> (  author={Sarina Meyer and Pascal Tilli and Pavel Denisov and Florian Lux and Julia Koch and Ngoc Thang Vu},)
+
+[comment]: <> (  title={{Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy}},)
+
+[comment]: <> (  year=2023,)
+
+[comment]: <> (  booktitle={Proc. SLT 2022},)
+
+[comment]: <> (  pages={},)
+
+[comment]: <> (  doi={})
+
+[comment]: <> (})
+
+[comment]: <> (```)

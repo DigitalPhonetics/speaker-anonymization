@@ -36,9 +36,9 @@ def create_wgan(parameters, device, optimizer='adam'):
 
 
 def init_resnet(parameters):
-    critic = ResNet_D(parameters['data_dim'][-1], parameters['size'], nfilter=parameters['nfilter'],
+    critic = ResNet_D(parameters['z_dim'], parameters['size'], nfilter=parameters['nfilter'],
                       nfilter_max=parameters['nfilter_max'])
-    generator = ResNet_G(parameters['data_dim'][-1], parameters['z_dim'], parameters['size'],
+    generator = ResNet_G(parameters['z_dim'], parameters['size'],
                          nfilter=parameters['nfilter'], nfilter_max=parameters['nfilter_max'])
 
     generator.apply(weights_init_G)
