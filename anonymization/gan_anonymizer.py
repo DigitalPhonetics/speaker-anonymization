@@ -29,7 +29,7 @@ class GANAnonymizer(BaseAnonymizer):
             settings = json.load(f)
         self.vec_type = settings.get('vec_type', self.vec_type)
         self.vectors_file = settings.get('vectors_file', self.vectors_file)
-        self.embed_model_path = settings.get('embed_model_path', None)
+        self.embed_model_path = settings.get('embed_model_path', Path('pretrained_models'))
 
         if (model_dir / self.vectors_file).is_file():
             self.gan_vectors = torch.load(model_dir / self.vectors_file, map_location=self.device)

@@ -49,6 +49,6 @@ class BaseAnonymizer:
         if vector_dir.exists():
             vectors.load_vectors(in_dir=vector_dir)
         else:
-            vectors.extract_vectors_from_audio(data_dir=data_dir)
+            vectors.extract_vectors_from_audio(data_dir=data_dir, model_path=self.embed_model_path)
             vectors.save_vectors(out_dir=vector_dir)
         return vectors
