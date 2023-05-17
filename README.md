@@ -6,7 +6,8 @@ This repository contains the speaker anonymization system developed at the Insti
 | Paper | Published at | Branch | Demo |
 |-------|--------------|--------|------|
 | [Speaker Anonymization with Phonetic Intermediate Representations](https://www.isca-speech.org/archive/interspeech_2022/meyer22b_interspeech.html) | [Interspeech 2022](https://www.interspeech2022.org/) | [phonetic_representations](https://github.com/DigitalPhonetics/speaker-anonymization/tree/phonetic_representations) | [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization) |
-| [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://arxiv.org/abs/2210.07002) | Soon at [SLT 2022](https://slt2022.org/) | [gan_embeddings](https://github.com/DigitalPhonetics/speaker-anonymization/tree/gan_embeddings) | [https://huggingface.co/spaces/sarinam/speaker-anonymization-gan](https://huggingface.co/spaces/sarinam/speaker-anonymization-gan) |
+| [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://ieeexplore.ieee.org/document/10022601) | [SLT 2022](https://slt2022.org/) | [gan_embeddings](https://github.com/DigitalPhonetics/speaker-anonymization/tree/gan_embeddings) | [https://huggingface.co/spaces/sarinam/speaker-anonymization-gan](https://huggingface.co/spaces/sarinam/speaker-anonymization-gan) |
+| [Prosody Is Not Identity: A Speaker Anonymization Approach Using Prosody Cloning](https://ieeexplore.ieee.org/document/10096607) | [ICASSP 2023](https://2023.ieeeicassp.org/) | [main](https://github.com/DigitalPhonetics/speaker-anonymization/tree/main) | - |
 
 If you want to see the code to the respective papers, go to the branch referenced in the table. The latest version 
 of our system can be found here on the main branch.
