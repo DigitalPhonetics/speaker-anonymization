@@ -136,6 +136,8 @@ class GANAnonymizer(BaseAnonymizer):
         i = 0
         limit = 20
         while i < limit:
+            if len(self.unused_indices) == 0:
+                self.unused_indices = np.arange(len(self.gan_vectors))  # reset indices
             idx = np.random.choice(self.unused_indices)
             anon_vec = self.gan_vectors[idx]
             sim = 1 - cosine(spk_vec.cpu().numpy(), anon_vec.cpu().numpy())
