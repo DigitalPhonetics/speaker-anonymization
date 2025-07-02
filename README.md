@@ -1,7 +1,6 @@
 # Speaker Anonymization
 
-**News: The main branch of the repository contains now the code to our latest paper, Probing the Feasibility of Multilingual Speaker Anonymization,
-that has been accepted at Interspeech 2024. For the previous version, please go to the [prosody_cloning](https://github.com/DigitalPhonetics/speaker-anonymization/tree/prosody_cloning)  branch.**
+**The main branch of the repository contains the code to our multilingual paper, Probing the Feasibility of Multilingual Speaker Anonymization (Interspeech 2024). For other versions, please select the corresponding branch from the table below.**
 
 This repository contains the speaker anonymization system developed at the Institute for Natural Language Processing 
 (IMS) at the University of Stuttgart, Germany. The system is described in the following papers:
@@ -12,9 +11,9 @@ This repository contains the speaker anonymization system developed at the Insti
 | [Anonymizing Speech with Generative Adversarial Networks to Preserve Speaker Privacy](https://ieeexplore.ieee.org/document/10022601) | [SLT 2022](https://slt2022.org/) | [gan_embeddings](https://github.com/DigitalPhonetics/speaker-anonymization/tree/gan_embeddings)                     | [https://huggingface.co/spaces/sarinam/speaker-anonymization-gan](https://huggingface.co/spaces/sarinam/speaker-anonymization-gan) |
 | [Prosody Is Not Identity: A Speaker Anonymization Approach Using Prosody Cloning](https://ieeexplore.ieee.org/document/10096607) | [ICASSP 2023](https://2023.ieeeicassp.org/) | [prosody_cloning](https://github.com/DigitalPhonetics/speaker-anonymization/tree/prosody_cloning)                   | - |
 | [Probing the Feasibility of Multilingual Speaker Anonymization](https://www.isca-archive.org/interspeech_2024/meyer24_interspeech.html) | [Interspeech 2024](https://interspeech2024.org/) | [multilingual](https://github.com/DigitalPhonetics/speaker-anonymization/tree/multilingual)                         | Audio samples: [https://multilingualspeakeranonymization.github.io](https://multilingualspeakeranonymization.github.io) |
+| First Steps Towards Voice Anonymization for Code-Switching Speech | soon at [Interspeech 2025](https://www.interspeech2025.org/home) | [codeswitching](https://github.com/DigitalPhonetics/speaker-anonymization/tree/codeswitching) | - |
 
-If you want to see the code to the respective papers, go to the branch referenced in the table. The latest version 
-of our system can be found here on the main branch.
+If you want to see the code to the respective papers, go to the branch referenced in the table. 
 
 **Check out our live demo on Hugging Face: [https://huggingface.co/spaces/sarinam/speaker-anonymization](https://huggingface.co/spaces/sarinam/speaker-anonymization)**
 
@@ -331,6 +330,15 @@ python run_evaluation.py --config eval_post/eval_post_asv_with_trained_model.yam
   year={2023},
   pages={1-5},
   doi={10.1109/ICASSP49357.2023.10096607}
+}
+@inproceedings{meyer2024multilingual,
+  title     = {Probing the Feasibility of Multilingual Speaker Anonymization},
+  author    = {Sarina Meyer and Florian Lux and Ngoc Thang Vu},
+  year      = {2024},
+  booktitle = {Interspeech 2024},
+  pages     = {4448--4452},
+  doi       = {10.21437/Interspeech.2024-1615},
+  issn      = {2958-1796},
 }
 ```
 
