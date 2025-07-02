@@ -11,6 +11,14 @@ def create_clean_dir(dir_name:Path):
         dir_name.mkdir(exist_ok=True, parents=True)
 
 
+def copy_data_dir(dataset_path, output_path):
+    # Copy utt2spk wav.scp and so on, but not the directories inside (may contains clear or anonymzied *.wav)
+    os.makedirs(output_path, exist_ok=True)
+    for p in glob.glob(str(dataset_path / '*'), recursive=False):
+        if os.path.isfile(p):
+            shutil.copy(p, output_path)
+
+
 def remove_contents_in_dir(dir_name:Path):
     # solution from https://stackoverflow.com/a/56151260
     for path in dir_name.glob("**/*"):
@@ -46,8 +54,7 @@ def find_asv_model_checkpoint(model_dir):
 def get_datasets(config):
     datasets = {}
     data_dir = config.get('data_dir', None).expanduser() # if '~' is given in path then manually expand
-    lang = config['lang']
-    for dataset in config['datasets'][lang]:
+    for dataset in config['datasets']:
         if data_dir:
             for subset in dataset['enrolls'] + dataset['trials']:
                 dataset_name = f'{dataset["data"]}_{dataset["set"]}_{subset}'

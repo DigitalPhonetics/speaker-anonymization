@@ -155,7 +155,7 @@ class WassersteinGanQuadraticCost:
         target = target.squeeze().to(self.device)
 
         for i in range(opt_iterations):
-            self.D.zero_grad()  # ???
+            self.D.zero_grad()
             self.D_opt.zero_grad()
             generated_data.requires_grad_()
             if generated_data.grad is not None:

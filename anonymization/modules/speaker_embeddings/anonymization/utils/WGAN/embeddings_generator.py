@@ -21,7 +21,7 @@ class EmbeddingsGenerator:
 
 
     def _load_model(self, path):
-        gan_checkpoint = torch.load(path, map_location="cpu")
+        gan_checkpoint = torch.load(path, map_location='cpu')
 
         self.wgan = create_wgan(parameters=gan_checkpoint['model_parameters'], device=self.device)
         self.wgan.G.load_state_dict(gan_checkpoint['generator_state_dict'])

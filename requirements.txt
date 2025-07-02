@@ -1,7 +1,9 @@
--r anonymization/modules/tts/IMSToucan/requirements.txt
-numpy
 torch
 torchaudio
+torch_complex
+librosa
+matplotlib
+praat-parselmouth
 scikit-learn
 speechbrain
 jupyter
@@ -9,7 +11,18 @@ espnet
 espnet_model_zoo
 pyyaml
 openpyxl
+cvxopt
 seaborn
-transformers
+transformers==4.47.0
 noisereduce
 accelerate
+dragonmapper
+pypinyin
+pyloudnorm
+phonemizer
+transphone
+phonepiece
+xlrd
+dotwiz
+imageio
+chinese-converter

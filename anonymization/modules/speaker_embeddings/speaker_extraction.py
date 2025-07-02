@@ -37,7 +37,11 @@ def extraction_job(params):
         if isinstance(wav_path, list):
             wav_path = wav_path[1]
         signal, fs = torchaudio.load(wav_path)
-        norm_wave = normalize_wave(signal, fs, device=device)
+        try:
+            norm_wave = normalize_wave(signal, fs, device=device)
+        except ValueError:
+            logger.warning(f'Value error: {utt}, {signal.shape}')
+            continue
 
         try:
             spk_embs = [extractor.extract_vector(audio=norm_wave, sr=fs) for extractor in speaker_extractors]
@@ -49,6 +53,9 @@ def extraction_job(params):
             vector = spk_embs[0]
         else:
             vector = torch.cat(spk_embs, dim=0)
+        if bool(torch.isnan(vector).any()) is True:
+            print(f'Skip {utt} during speaker extraction because of nan values')
+            continue
         vectors.append(vector)
         utts.append(utt)
         speakers.append(info['spk'])
@@ -231,8 +238,9 @@ class SpeakerExtraction:
     def _combine_speaker_embeddings(self, main_emb_instance, additional_emb_instances):
         for add_emb_instance in additional_emb_instances:
             identifiers = [add_emb_instance.idx2identifiers[i] for i in range(len(add_emb_instance))]
-            main_emb_instance.add_vectors(identifiers=identifiers, vectors=add_emb_instance.vectors,
-                                          speakers=add_emb_instance.original_speakers, genders=add_emb_instance.genders)
+            if identifiers:
+                main_emb_instance.add_vectors(identifiers=identifiers, vectors=add_emb_instance.vectors,
+                                              speakers=add_emb_instance.original_speakers, genders=add_emb_instance.genders)
         return main_emb_instance
 
     def _remove_temp_files(self, out_dir):

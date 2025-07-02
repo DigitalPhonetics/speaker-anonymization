@@ -1,6 +1,5 @@
 import logging
 import torch
-#torch.set_num_threads(1)
 
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
@@ -66,7 +65,7 @@ class ProsodyExtraction:
                     utt_prosody = self.extractor.extract_prosody(transcript=text, ref_audio_path=wav_path,
                                                                  input_is_phones=text_is_phones)
                 except IndexError:
-                    logger.warn(f'IndexError for {utt}')
+                    logger.info(f'IndexError for {utt}')
                     continue
                 duration, pitch, energy, start_silence, end_silence = utt_prosody
                 data_prosody.add_instance(utterance=utt, duration=duration, pitch=pitch, energy=energy,
@@ -81,6 +80,6 @@ class ProsodyExtraction:
         elif len(data_prosody.utterances) > 0:
             logger.info('No prosody extraction necessary; load stored values instead...')
         else:
-            logger.warn(f'No utterances could be found in {dataset_path}!')
+            logger.info(f'No utterances could be found in {dataset_path}!')
 
         return data_prosody

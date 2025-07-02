@@ -1,6 +1,5 @@
 from tqdm.contrib.concurrent import process_map
 import time
-import logging
 from torch.multiprocessing import set_start_method
 from itertools import  repeat
 import torch
@@ -17,20 +16,24 @@ logger = setup_logger(__name__)
 
 
 class ASRDataset(torch.utils.data.Dataset):
-    def __init__(self, utt2spk, wav_scp, utt2dur, already_recognized_utts, utterance_list, eval=False):
+    def __init__(self, utt2spk, wav_scp, already_recognized_utts, utterance_list, n=None):
         self.utterances = []
+        self.utt2idx = {}
+        i = 0
         for utt, spk in utt2spk.items():
             if utt not in wav_scp:
                 continue
-            if eval:
-                if float(utt2dur[utt]) > 30.0:  # whisper has problems with utterances longer than 30 seconds, there are a few in LibriSpeech
-                    continue
             if utt in already_recognized_utts:
                 continue
             if utterance_list and utt not in utterance_list:
                 continue
             if utt in wav_scp:
                 self.utterances.append((utt, spk, wav_scp[utt]))
+                self.utt2idx[utt] = i
+                i += 1
+
+        if n is not None:
+            self.utterances = self.utterances[:n]
 
     def __len__(self):
         return len(self.utterances)
@@ -42,24 +45,27 @@ class ASRDataset(torch.utils.data.Dataset):
             speech = resampy.resample(speech, rate, 16000)
         return {'raw': speech, 'sampling_rate': 16000, 'utt': utt, 'spk': spk}
 
+    def get_instance(self, utt):
+        idx = self.utt2idx[utt]
+        return self.__getitem__(idx)
+
+
 def run_process(params):
-    utt2spk, wav_scp, utt2dur, already_recognized_utts, utterance_list, asr_model, out_dir, eval, save_intermediate, \
-        sleep, job_id = params
+    utt2spk, wav_scp, already_recognized_utts, utterance_list, asr_model, out_dir, save_intermediate, sleep, job_id, n = params
     time.sleep(sleep)
-    asr_dataset = ASRDataset(utt2spk=utt2spk, wav_scp=wav_scp, utt2dur=utt2dur,
-                             already_recognized_utts=already_recognized_utts, utterance_list=utterance_list, eval=eval)
+    asr_dataset = ASRDataset(utt2spk=utt2spk, wav_scp=wav_scp, already_recognized_utts=already_recognized_utts,
+                             utterance_list=utterance_list, n=n)
     return asr_model.recognize_speech_of_dataset(asr_dataset, out_dir=out_dir, save_intermediate=save_intermediate,
                                                  job_id=job_id)
 
 
 class SpeechRecognition:
 
-    def __init__(self, devices, settings, results_dir=None, save_intermediate=True, force_compute=False, eval=False):
+    def __init__(self, devices, settings, results_dir=None, save_intermediate=True, force_compute=False):
         self.devices = devices
         self.save_intermediate = save_intermediate
         self.force_compute = force_compute if force_compute else settings.get('force_compute_recognition', False)
         self.n_processes = len(self.devices)
-        self.eval = eval
 
         self.model_hparams = settings
 
@@ -82,7 +88,7 @@ class SpeechRecognition:
                               for device in self.devices]
             self.is_phones = (self.asr_models[0].output == 'phones')
 
-    def recognize_speech(self, dataset_path, dataset_name=None, utterance_list=None):
+    def recognize_speech(self, dataset_path, dataset_name=None, utterance_list=None, n=None):
         dataset_name = dataset_name if dataset_name else dataset_path.name
         dataset_results_dir = self.results_dir / dataset_name if self.save_intermediate else Path('')
 
@@ -106,13 +112,12 @@ class SpeechRecognition:
             dataset_results_dir.mkdir(exist_ok=True, parents=True)
             logger.info(f'Recognize speech of {len(utt2spk) - len(texts)} utterances...')
             wav_scp = read_kaldi_format(dataset_path / 'wav.scp')
-            utt2dur = read_kaldi_format(dataset_path / 'utt2dur')
 
             save_intermediate = self.save_intermediate and not utterance_list
             start = time.time()
             if self.n_processes == 1:
-                params = [utt2spk, wav_scp, utt2dur, texts.utterances, utterance_list, self.asr_models[0],
-                          dataset_results_dir, self.eval, save_intermediate, 0, None]
+                params = [utt2spk, wav_scp, texts.utterances, utterance_list, self.asr_models[0], dataset_results_dir,
+                          save_intermediate, 0, None, n]
                 new_texts = [run_process(params)]
             else:
                 sleeps = [10 * i for i in range(self.n_processes)]
@@ -120,15 +125,14 @@ class SpeechRecognition:
                                 for i in range(self.n_processes)]
                 params = zip(utt2spk_jobs, # utterances to recognize
                              repeat(wav_scp), # wav paths
-                             repeat(utt2dur), # durations
                              repeat(texts.utterances), # already recognized utterances
                              repeat(utterance_list), # sub list of utterances
                              self.asr_models, # asr model
                              repeat(dataset_results_dir),  # out_dir
-                             repeat(self.eval),
                              repeat(save_intermediate),  # whether to save intermediate results
                              sleeps, # avoid starting all processes at same time
-                             list(range(self.n_processes))) # job_id
+                             list(range(self.n_processes)), # job_id
+                             repeat(n))  # restrict to n first utterances of dataset
                 new_texts = process_map(run_process, params, max_workers=self.n_processes)
 
 

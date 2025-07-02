@@ -1,3 +1,4 @@
 [submodule "anonymization/modules/tts/IMSToucan"]
 	path = anonymization/modules/tts/IMSToucan
-	url = https://github.com/DigitalPhonetics/IMS-Toucan
+	url = https://github.com/DigitalPhonetics/IMS-Toucan.git
+	branch = MassiveScaleToucan

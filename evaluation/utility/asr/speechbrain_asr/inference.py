@@ -1,7 +1,7 @@
 from utils import save_kaldi_format
 from copy import deepcopy
 
-from speechbrain.pretrained import EncoderASR, EncoderDecoderASR
+from speechbrain.inference import EncoderASR, EncoderDecoderASR
 from speechbrain.utils.metric_stats import ErrorRateStats
 import torch
 import torchaudio

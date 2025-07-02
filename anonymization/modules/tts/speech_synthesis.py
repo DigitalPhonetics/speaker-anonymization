@@ -18,6 +18,11 @@ class SpeechSynthesis:
         self.save_output = save_output
         self.force_compute = force_compute if force_compute else settings.get('force_compute_synthesis', False)
         lang = settings.get('lang', 'en')
+        if lang == 'cs':
+            cs_languages = settings.get('languages', ['en', 'zh'])
+        else:
+            cs_languages = None
+        accent_lang = settings.get('accent_lang', None)
         logger.info(f'Use language {lang}')
 
         synthesizer_type = settings.get('synthesizer', 'ims')
@@ -30,7 +35,8 @@ class SpeechSynthesis:
             for device in self.devices:
                 self.tts_models.append(ImsTTS(hifigan_path=hifigan_path, fastspeech_path=fastspeech_path,
                                               embedding_path=embedding_path, device=device,
-                                              output_sr=self.output_sr, lang=lang))
+                                              output_sr=self.output_sr, lang=lang, accent_lang=accent_lang,
+                                              cs_languages=cs_languages))
 
         if results_dir:
             self.results_dir = results_dir

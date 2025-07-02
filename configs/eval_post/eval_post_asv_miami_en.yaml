@@ -1,0 +1,49 @@
+lang: en
+
+root_dir: ..
+exp_dir: !ref <root_dir>/exp/miami_<lang>
+models_dir:  !ref <root_dir>/models
+results_summary_dir: !ref <exp_dir>/results_summary/eval_post_miami_<lang>
+
+datasets:
+  - name: miami-en_test
+    data: miami-en
+    set: test
+    enrolls: [ enrolls ]
+    trials: [ trials_f, trials_m ]
+
+
+eval_steps:  # all metrics in this list will be computed in the evaluation. Remove entry to skip
+  privacy:
+    - asv
+
+anon_data_suffix: anon  # suffix for dataset to signal that it is anonymized
+eval_data_dir: !ref <root_dir>/results/miami/<lang>/formatted_data/ims_sttts  # path to anonymized evaluation data in kaldi format, e.g. <eval_data_dir>/libri_test_enrolls/wav.scp etc.
+
+privacy:
+  asv:
+    model_dir: !ref ../models/asv_eval_ecapa_anon  # path to existing ASV model or output for trained ASV model
+    vec_type: ecapa  # ecapa or xvector
+
+    training:
+      anon: true  # true or false, depending on whether the training data for the ASV is anonymized or original
+      train_data_dir: !ref <root_dir>/results/vpc/formatted_data/ims_sttts/train-clean-360_anon  # path to original or anonymized training data for ASV
+      train_config: evaluation/privacy/asv/asv_train/hparams/train_ecapa_tdnn_small.yaml
+      inference_config: evaluation/privacy/asv/asv_train/hparams/ecapa/hyperparams.yaml
+      finetuning: false # true (ft) or false (scratch)
+      pretrained_model: null  # path to pretrained model, only used for finetuning
+      lr: 0.01
+      epochs: 10
+      batch_size: 256
+      num_utt: ALL  # ALL or specific number, number of utterances per speaker
+      utt_selection: spk-diverse-sess  # select utterances per speaker and session (spk-sess), per speaker and randomly across all sessions (spk-random), per speaker and balanced across sessions (spk-diverse-sess)
+      num_spk: 921  # ALL or specific number, number of speakers
+      retrain: false  # retrain in any case (true) or skip training if model exists (false)
+
+    evaluation:
+      results_dir: !ref <exp_dir>/asv_anon  # path to save evaluation results
+      distance: cosine  # cosine or plda
+      plda:   # ignored if distance is not plda
+        model_dir: null  # path to trained PLDA or output of PLDA training
+        train_data_dir: null # path to PLDA training data
+        anon: true  # trained on anonymized (true) or original (false) data

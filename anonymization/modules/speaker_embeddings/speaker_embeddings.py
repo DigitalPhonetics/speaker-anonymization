@@ -1,7 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
 import torch
-import numpy as np
 
 from utils import read_kaldi_format, save_kaldi_format, create_clean_dir
 

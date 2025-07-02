@@ -32,15 +32,33 @@ def asv_eval_speechbrain(eval_datasets, eval_data_dir, params, device, anon_data
 
             EER = asv.eer_compute(enrol_dir=eval_data_dir / enroll_name, test_dir=eval_data_dir / test_name,
                                   trial_runs_file=eval_data_dir / trial / 'trials')
+            EER = round(EER * 100, 3)
 
-            print(f'{enroll_name}-{test_name}: {scenario.upper()}-EER={EER}')
+            exp_results_string = f'{enroll_name}-{test_name}: {scenario.upper()}-EER={EER}'
             trials_info = trial.split('_')
             gender = trials_info[3]
             if 'common' in trial:
                 gender += '_common'
-            results.append({'dataset': trials_info[0], 'split': trials_info[1], 'gender': gender,
+            exp_results = {'dataset': trials_info[0], 'split': trials_info[1], 'gender': gender,
                             'enrollment': 'original' if scenario[0] == 'o' else 'anon',
-                            'trial': 'original' if scenario[1] == 'o' else 'anon', 'EER': round(EER * 100, 3)})
+                            'trial': 'original' if scenario[1] == 'o' else 'anon', 'EER': EER}
+
+            if (eval_data_dir / trial / 'trials_balanced').exists():
+                EER_balanced = asv.eer_compute(enrol_dir=eval_data_dir / enroll_name, test_dir=eval_data_dir / test_name,
+                                  trial_runs_file=eval_data_dir / trial / 'trials_balanced')
+                EER_balanced = round(EER_balanced * 100, 3)
+                exp_results_string += f'-EER_balanced={EER_balanced}'
+                exp_results['EER-balanced'] = EER_balanced
+
+            if (eval_data_dir / trial / 'trials_constant').exists():
+                EER_constant = asv.eer_compute(enrol_dir=eval_data_dir / enroll_name, test_dir=eval_data_dir / test_name,
+                                  trial_runs_file=eval_data_dir / trial / 'trials_constant')
+                EER_constant = round(EER_constant * 100, 3)
+                exp_results_string += f'-EER_constant={EER_constant}'
+                exp_results['EER-constant'] = EER_constant
+
+            print(exp_results_string)
+            results.append(exp_results)
 
     results_df = pd.DataFrame(results)
     print(results_df)

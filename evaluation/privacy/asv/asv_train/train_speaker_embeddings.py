@@ -7,6 +7,7 @@ from speechbrain.utils.distributed import run_on_main
 
 # Dataset prep (parsing Libri-train-clean-360 and annotation into csv files)
 from .libri_prepare import prepare_libri  # noqa
+from .seame_prepare import prepare_seame
 from .asv_dataset import ASVDatasetGenerator
 
 
@@ -109,8 +110,10 @@ def train_asv_speaker_embeddings(config_file, hparams_file, run_opts):
     with open(config_file) as f:
         hparams = load_hyperpyyaml(f, overrides)
 
+    prepare_data = prepare_seame if 'seame' in hparams['data_folder'] else prepare_libri
+
     run_on_main(
-        prepare_libri,
+        prepare_data,
         kwargs={
             "data_folder": hparams["data_folder"],
             "save_folder": hparams["save_folder"],

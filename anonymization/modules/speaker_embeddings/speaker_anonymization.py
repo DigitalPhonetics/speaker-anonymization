@@ -34,7 +34,7 @@ class SpeakerAnonymization:
         return self.anonymizer.suffix
 
     def anonymize_embeddings(self, speaker_embeddings, dataset_name):
-        dataset_results_dir = self.results_dir / dataset_name / 'spk-level' if self.save_intermediate else ''
+        dataset_results_dir = self.results_dir / dataset_name / self.emb_level if self.save_intermediate else ''
 
         if dataset_results_dir.exists() and any(dataset_results_dir.iterdir()) and not speaker_embeddings.new and not\
                 self.force_compute:

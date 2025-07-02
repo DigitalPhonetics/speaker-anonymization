@@ -1,6 +1,8 @@
 import warnings
 import torch
-from anonymization.modules.tts.IMSToucan.TrainingInterfaces.Spectrogram_to_Embedding.StyleEmbedding import StyleEmbedding
+from torchaudio.transforms import Resample
+
+from anonymization.modules.tts.IMSToucan.Modules.EmbeddingModel.StyleEmbedding import StyleEmbedding
 from anonymization.modules.tts.IMSToucan.Preprocessing.AudioPreprocessor import AudioPreprocessor
 
 
@@ -14,18 +16,18 @@ class StyleEmbeddings:
         self.extractor.load_state_dict(check_dict['style_emb_func'])
         self.extractor.to(self.device)
 
-        self.audio_preprocessor = AudioPreprocessor(input_sr=16000, output_sr=16000, cut_silence=True,
+        self.sr = 16000
+        self.audio_preprocessor = AudioPreprocessor(input_sr=self.sr, output_sr=self.sr, cut_silence=True,
                                                     device=self.device)
 
     def extract_vector(self, audio, sr):
-        if sr != self.audio_preprocessor.sr:
-            self.audio_preprocessor = AudioPreprocessor(input_sr=sr, output_sr=16000, cut_silence=True,
-                                                        device=self.device)
+        if sr != self.sr:
+            resample = Resample(orig_freq=sr, new_freq=self.sr).to(self.device)
+            audio = resample(torch.tensor(audio, device=self.device, dtype=torch.float32))
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            audio = self.audio_preprocessor.cut_silence_from_audio(audio.to(self.device)).cpu()
-            spec = self.audio_preprocessor.logmelfilterbank(audio, 16000).transpose(0, 1)
+            spec = self.audio_preprocessor.audio_to_mel_spec_tensor(audio, explicit_sampling_rate=self.sr).transpose(0, 1)
             spec_len = torch.LongTensor([len(spec)])
             vector = self.extractor(spec.unsqueeze(0).to(self.device), spec_len.unsqueeze(0).to(self.device))
         return vector.squeeze().detach()

@@ -21,8 +21,8 @@ class GANAnonymizer(BaseAnonymizer):
     """
     def __init__(
         self,
+        device: Union[str, torch.device, int],
         vec_type: str = "xvector",
-        device: Union[str, torch.device, int] = "cuda:0",  # TODO
         model_name: Union[str, PathLike] = None,
         vectors_file: Union[str, PathLike] = None,
         sim_threshold: float = 0.7,
@@ -62,15 +62,12 @@ class GANAnonymizer(BaseAnonymizer):
 
         if self.vectors_file.is_file():
             self.gan_vectors = torch.load(self.vectors_file, map_location=self.device)
-            #print(self.gan_vectors)
             logger.info(f'Gan vectors: {self.gan_vectors.shape}')
-            if self.unused_indices_file.is_file():
-                self.unused_indices = torch.load(
-                    self.unused_indices_file, map_location="cpu"
-                )
-                logger.info(f'Unused indices: {self.unused_indices.shape}')
-            else:
-                self.unused_indices = np.arange(len(self.gan_vectors))
+            # if self.unused_indices_file.is_file():
+            #     self.unused_indices = torch.load(self.unused_indices_file)
+            #     logger.info(f'Unused indices: {self.unused_indices.shape}')
+            # else:
+            self.unused_indices = np.arange(len(self.gan_vectors))
         else:
             (
                 self.gan_vectors,

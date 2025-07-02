@@ -1,5 +1,4 @@
 from pathlib import Path
-from datetime import datetime
 import time
 
 from anonymization.modules import (
@@ -87,6 +86,7 @@ class STTTSPipeline:
                 self.prosody_anonymization = None
         else:
             self.prosody_extraction = None
+            self.prosody_anonymization = None
 
         # TTS component
         self.speech_synthesis = SpeechSynthesis(
@@ -170,7 +170,7 @@ class STTTSPipeline:
                 anon_vectors_path = self.speaker_extraction.results_dir
             # now = datetime.strftime(datetime.today(), "%d-%m-%y_%H:%M")
             # output_path = self.results_dir / "formatted_data" / now
-            output_path = self.results_dir / 'formatted_data' / f'{self.config_name}_{self.config["lang"]}'
+            output_path = self.results_dir / 'formatted_data' / 'ims_sttts'
             prepare_evaluation_data(
                 dataset_dict=datasets,
                 anon_wav_scps=anon_wav_scps,

@@ -6,7 +6,6 @@ from pathlib import Path
 import multiprocessing
 parser = ArgumentParser()
 parser.add_argument('--config', default='config_eval.yaml')
-parser.add_argument('--lang', default='en', choices=['en', 'de', 'fr', 'it', 'es', 'pt', 'nl', 'pl', 'ru'])
 parser.add_argument('--gpu_ids', default='0')
 args = parser.parse_args()
 
@@ -143,7 +142,7 @@ def save_result_summary(out_dir, results_dict, config):
 if __name__ == '__main__':
     multiprocessing.set_start_method("fork", force=True)
 
-    params = parse_yaml(Path('configs', args.config), overrides={'lang': args.lang})
+    params = parse_yaml(Path('configs', args.config))
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     eval_data_dir = params['eval_data_dir']
@@ -166,9 +165,9 @@ if __name__ == '__main__':
         )
         eval_data_dir = output_path
 
-    eval_data_trials = get_eval_trial_datasets(params['datasets'][params['lang']])
+    eval_data_trials = get_eval_trial_datasets(params['datasets'])
     eval_data_trials = check_vctk_split(eval_data_trials, eval_data_dir=eval_data_dir, anon_suffix='_'+anon_suffix)
-    eval_data_asr = get_eval_asr_datasets(params['datasets'][params['lang']], eval_data_dir=eval_data_dir, anon_suffix=anon_suffix)
+    eval_data_asr = get_eval_asr_datasets(params['datasets'], eval_data_dir=eval_data_dir, anon_suffix=anon_suffix)
 
     # make sure given paths exist
     assert eval_data_dir.exists(), f'{eval_data_dir} does not exist'
@@ -179,13 +178,15 @@ if __name__ == '__main__':
             model_dir = params['privacy']['asv']['model_dir']
             if 'training' in asv_params:
                 asv_train_params = asv_params['training']
+                inference_config = params['privacy']['asv']['training']['inference_config']
                 if not model_dir.exists() or asv_train_params.get('retrain', True) is True:
                     start_time = time.time()
                     logger.info('Perform ASV training')
                     train_asv_eval(train_params=asv_train_params, output_dir=asv_params['model_dir'])
                     logger.info("ASV training time: %f min ---" % (float(time.time() - start_time) / 60))
-                    model_dir = scan_checkpoint(model_dir, 'CKPT')
-                    shutil.copy('evaluation/privacy/asv/asv_train/hparams/ecapa/hyperparams.yaml', params['privacy']['asv']['model_dir'])
+                model_dir = scan_checkpoint(model_dir, 'CKPT')
+                shutil.copy(inference_config, params['privacy']['asv']['model_dir'] / 'hyperparams.yaml')
+                shutil.copy(inference_config, model_dir / 'hyperparams.yaml')
 
             if 'evaluation' in asv_params:
                 logger.info('Perform ASV evaluation')
@@ -250,3 +251,8 @@ if __name__ == '__main__':
         now = datetime.strftime(datetime.today(), "%d-%m-%y_%H:%M")
         results_summary_dir = params.get('results_summary_dir', Path('exp', 'results_summary', now))
         save_result_summary(out_dir=results_summary_dir, results_dict=results, config=params)
+
+        for eval_type, res in results.items():
+            print(f'{eval_type}:')
+            print(res)
+            print()

@@ -41,11 +41,15 @@ def prepare_evaluation_data(dataset_dict, anon_wav_scps, anon_vectors_path, outp
                 split_dataset_name = dataset.split('_')
                 trial_combined_name = f'{split_dataset_name[0]}_{split_dataset_name[1]}_asr{suffix}'
                 trials_subs[output_path / trial_combined_name].append(out_data_split)
+                if (orig_dataset_path / 'trials_balanced').exists():
+                    copy_files += ['trials_balanced']
+                if (orig_dataset_path / 'trials_constant').exists():
+                    copy_files += ['trials_constant']
             elif 'enrolls' in dataset:
                 copy_files += ['enrolls']
 
             if anon:
-                anon_vec_split = anon_vectors_path / f'{dataset}' / f'{emb_level}-level'
+                anon_vec_split = anon_vectors_path / f'{dataset}' / emb_level
                 if dataset == 'train-clean-360':
                     spk2gender = read_kaldi_format(anon_vec_split / 'spk2gender')
                     if '-' in list(spk2gender.keys())[0]:  # spk2gender contains utts as keys, not speakers
@@ -80,7 +84,7 @@ def prepare_evaluation_data(dataset_dict, anon_wav_scps, anon_vectors_path, outp
                                                   global_utt2spk=read_kaldi_format(orig_data_asv / 'utt2spk'))
                 save_kaldi_format(spk2gender, out_data_asv / 'spk2gender')
 
-            if '_all' in dataset:
+            if 'vctk' in dataset and '_all' in dataset:
                 split_vctk_into_common_and_diverse(dataset=dataset, output_path=output_path,
                                                    orig_data_path=orig_data_path, copy_files=copy_files, anon=anon,
                                                    out_data_split=out_data_split, anon_suffix=suffix)

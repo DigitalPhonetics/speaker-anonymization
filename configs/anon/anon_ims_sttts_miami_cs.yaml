@@ -1,0 +1,75 @@
+lang: cs
+languages:
+  - en
+  - es
+
+root_dir : ..
+data_dir: !ref <root_dir>/data/miami/kaldi
+save_intermediate: true
+save_output: true
+
+results_dir: !ref <root_dir>/results/miami/cs
+models_dir:  !ref <root_dir>/models
+vectors_dir: !ref <results_dir>/original_speaker_embeddings
+
+force_compute_all: false
+datasets:
+  - name: miami-cs_test
+    data: miami-cs
+    set: test
+    enrolls: [ enrolls ]
+    trials: [ trials_f, trials_m ]
+
+pipeline: sttts
+
+modules:
+  asr:
+    recognizer: whisper
+    lang: null   # For Bangor Miami, it works best to infer the language in codeswitching
+    languages: !ref <languages>
+    fallback_lang: es
+    force_compute_recognition: false
+    model_path: !ref <models_dir>/whisper-large-v3
+    utt_start_token: ""
+    utt_end_token: ""
+    batch_size: 16
+    results_path: !ref <results_dir>/transcription/whisper-large-v3
+
+  speaker_embeddings:
+    anonymizer: ims
+    force_compute_extraction: false
+    force_compute_anonymization: false
+    vec_type: ecapa
+    emb_model_path: !ref <models_dir>/spkrec-ecapa-voxceleb
+    emb_level: utt   # possible: spk, utt
+    anon_settings:
+      method: gan
+      vectors_file: !ref <models_dir>/embedding_gan_generated_vectors.pt
+      gan_model_path: !ref <models_dir>/embedding_gan.pt
+      num_sampled: 5000
+      sim_threshold: 0.7
+    extraction_results_path: !ref <results_dir>/original_speaker_embeddings/<modules[speaker_embeddings][vec_type]>_<modules[speaker_embeddings][emb_level]>-level
+    anon_results_path: !ref <results_dir>/anon_speaker_embeddings/<modules[speaker_embeddings][vec_type]>_<modules[speaker_embeddings][emb_level]>-level
+
+#  prosody:
+#    extractor_type: ims
+#    lang: !ref <lang>
+#    aligner_model_path: !ref <models_dir>/Aligner.pt
+#    extraction_results_path: !ref <results_dir>/original_prosody/ims_extractor
+#    force_compute_extraction: false
+    #anonymizer_type: ims  # uncomment following lines to use random offset modification
+    #random_offset_lower: null
+    #random_offset_higher: null
+    #anon_results_path: anon_prosody/random_offsets
+
+  tts:
+    synthesizer: ims
+    lang: !ref <lang>
+    languages: !ref <languages>
+    accent_lang: null
+    force_compute_synthesis: false
+    fastspeech_path: !ref <models_dir>/ToucanTTS_Meta.pt
+    hifigan_path: !ref <models_dir>/Vocoder.pt
+    embeddings_path: !ref <models_dir>/spkrec-ecapa-voxceleb
+    output_sr: 16000
+    results_path: !ref <results_dir>/anon_speech/ims_sttts

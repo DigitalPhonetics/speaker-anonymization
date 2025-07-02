@@ -29,11 +29,7 @@ def asv_train_speechbrain(train_params, output_dir):
     }
 
     config = train_params['train_config']
-
-    if train_params['num_spk'] == 'ALL':
-        hparams['out_n_neurons'] = 921
-    else:
-        hparams['out_n_neurons'] = int(train_params['num_spk'])
+    hparams['out_n_neurons'] = int(train_params['num_spk'])
 
     sb_run_opts = deepcopy(run_opts)
     if torch.cuda.device_count() > 0:

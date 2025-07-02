@@ -1,92 +1,77 @@
 import os
-from pathlib import Path
-
+import librosa
+import pyloudnorm
 import soundfile
 import torch
+from huggingface_hub import hf_hub_download
+from speechbrain.inference import EncoderClassifier
+from torchaudio.transforms import Resample
 
 import sys
-sys.path.insert(0, str(Path('anonymization/modules/tts/IMSToucan').absolute()))
+from pathlib import Path
+import logging
 
-from .IMSToucan.InferenceInterfaces.InferenceArchitectures.InferenceToucanTTS import ToucanTTS
-from .IMSToucan.InferenceInterfaces.InferenceArchitectures.InferenceAvocodo import HiFiGANGenerator
-from .IMSToucan.InferenceInterfaces.InferenceArchitectures.InferenceBigVGAN import BigVGAN
+sys.path.insert(0, str((Path(__file__).parent / 'IMSToucan').absolute()))
+
+from .IMSToucan.Modules.ToucanTTS.InferenceToucanTTS import ToucanTTS
+from .IMSToucan.Modules.Vocoder.HiFiGAN_Generator import HiFiGAN
 from .IMSToucan.Preprocessing.AudioPreprocessor import AudioPreprocessor
 from .IMSToucan.Preprocessing.TextFrontend import ArticulatoryCombinedTextFrontend
 from .IMSToucan.Preprocessing.TextFrontend import get_language_id
-from .IMSToucan.TrainingInterfaces.Spectrogram_to_Embedding.StyleEmbedding import StyleEmbedding
-from utils import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class AnonFastSpeech2(torch.nn.Module):
 
-    def __init__(self, vocoder_model_path, tts_model_path, embedding_model_path, device="cpu", language="en",
-                 faster_vocoder=True):
+
+    def __init__(self, vocoder_model_path, tts_model_path, embedding_model_path, device='cpu', language='eng'):
         super().__init__()
         self.device = device
+
+        if tts_model_path is None:
+            tts_model_path = hf_hub_download(repo_id="Flux9665/ToucanTTS", filename="ToucanTTS.pt")
+        if vocoder_model_path is None:
+            vocoder_model_path = hf_hub_download(repo_id="Flux9665/ToucanTTS", filename="Vocoder.pt")
 
         ################################
         #   build text to phone        #
         ################################
-        self.text2phone = ArticulatoryCombinedTextFrontend(language=language, add_silence_to_end=True, silent=False) #TODO
+        self.text2phone = ArticulatoryCombinedTextFrontend(language=language, add_silence_to_end=True, device=self.device)
 
         ################################
         #   load weights               #
         ################################
         checkpoint = torch.load(tts_model_path, map_location='cpu')
-
-        ################################
-        #   load phone to mel model    #
-        ################################
-        self.use_lang_id = True
-        try:
-            self.phone2mel = ToucanTTS(weights=checkpoint["model"])  # multi speaker multi language
-            logger.info('Load multi speaker multi languages TTS model')
-        except RuntimeError:
-            try:
-                self.use_lang_id = False
-                self.phone2mel = ToucanTTS(weights=checkpoint["model"], lang_embs=None)  # multi speaker single language
-                logger.info('Load multi speaker single language TTS model')
-            except RuntimeError:
-                self.phone2mel = ToucanTTS(weights=checkpoint["model"], lang_embs=None,
-                                           utt_embed_dim=None)  # single speaker
-                logger.info('Load single speaker TTS model')
+        self.phone2mel = ToucanTTS(weights=checkpoint['model'], config=checkpoint['config'])
         with torch.no_grad():
             self.phone2mel.store_inverse_all()  # this also removes weight norm
         self.phone2mel = self.phone2mel.to(torch.device(device))
 
-        #################################
-        #  load mel to style models     #
-        #################################
-        self.style_embedding_function = StyleEmbedding()
-        check_dict = torch.load(embedding_model_path, map_location="cpu")
-        self.style_embedding_function.load_state_dict(check_dict["style_emb_func"])
-        self.style_embedding_function.to(self.device)
+        ######################################
+        #  load features to style models     #
+        ######################################
+        self.speaker_embedding_func_ecapa = EncoderClassifier.from_hparams(source='speechbrain/spkrec-ecapa-voxceleb',
+                                                                           run_opts={'device': str(device)},
+                                                                           savedir=embedding_model_path)
 
         ################################
         #  load mel to wave model      #
         ################################
-        if faster_vocoder:
-            self.mel2wav = HiFiGANGenerator(path_to_weights=vocoder_model_path).to(torch.device(device)) # TODO
-        else:
-            self.mel2wav = BigVGAN(path_to_weights=vocoder_model_path).to(torch.device(device))
-        self.mel2wav.remove_weight_norm()
-        self.mel2wav = torch.jit.trace(self.mel2wav, torch.randn([80, 5]).to(torch.device(device)))
+        vocoder_checkpoint = torch.load(vocoder_model_path, map_location='cpu')
+        self.vocoder = HiFiGAN()
+        self.vocoder.load_state_dict(vocoder_checkpoint)
+        self.vocoder = self.vocoder.to(device).eval()
+        self.vocoder.remove_weight_norm()
+        self.meter = pyloudnorm.Meter(24000)
 
         ################################
         #  set defaults                #
         ################################
-        self.default_utterance_embedding = checkpoint["default_emb"].to(self.device)
-        self.audio_preprocessor = AudioPreprocessor(input_sr=16000, output_sr=16000, cut_silence=True,
-                                                    device=self.device)
-        logger.info(f'AnonFastSpeech2 Language: {language}')
+        self.default_utterance_embedding = checkpoint['default_emb'].to(self.device)
+        self.ap = AudioPreprocessor(input_sr=100, output_sr=16000, device=device)
         self.phone2mel.eval()
-        self.mel2wav.eval()
-        self.style_embedding_function.eval()
-        if self.use_lang_id:
-            self.lang_id = get_language_id(language)
-        else:
-            self.lang_id = None
+        self.vocoder.eval()
+        self.lang_id = get_language_id(language)
         self.to(torch.device(device))
         self.eval()
 
@@ -94,14 +79,25 @@ class AnonFastSpeech2(torch.nn.Module):
         if embedding is not None:
             self.default_utterance_embedding = embedding.squeeze().to(self.device)
             return
-        assert os.path.exists(path_to_reference_audio)
-        wave, sr = soundfile.read(path_to_reference_audio)
-        if sr != self.audio_preprocessor.sr:
-            self.audio_preprocessor = AudioPreprocessor(input_sr=sr, output_sr=16000, cut_silence=True, device=self.device)
-        spec = self.audio_preprocessor.audio_to_mel_spec_tensor(wave).transpose(0, 1)
-        spec_len = torch.LongTensor([len(spec)])
-        self.default_utterance_embedding = self.style_embedding_function(spec.unsqueeze(0).to(self.device),
-                                                                         spec_len.unsqueeze(0).to(self.device)).squeeze()
+        if type(path_to_reference_audio) != list:
+            path_to_reference_audio = [path_to_reference_audio]
+
+        if len(path_to_reference_audio) > 0:
+            for path in path_to_reference_audio:
+                assert os.path.exists(path)
+            speaker_embs = list()
+            for path in path_to_reference_audio:
+                wave, sr = soundfile.read(path)
+                if len(wave.shape) > 1:  # oh no, we found a stereo audio!
+                    if len(wave[0]) == 2:  # let's figure out whether we need to switch the axes
+                        wave = wave.transpose()  # if yes, we switch the axes.
+                wave = librosa.to_mono(wave)
+                wave = Resample(orig_freq=sr, new_freq=16000).to(self.device)(
+                    torch.tensor(wave, device=self.device, dtype=torch.float32))
+                speaker_embedding = self.speaker_embedding_func_ecapa.encode_batch(
+                    wavs=wave.to(self.device).squeeze().unsqueeze(0)).squeeze()
+                speaker_embs.append(speaker_embedding)
+            self.default_utterance_embedding = sum(speaker_embs) / len(speaker_embs)
 
     def set_language(self, lang_id):
         """
@@ -111,13 +107,27 @@ class AnonFastSpeech2(torch.nn.Module):
         self.set_accent_language(lang_id=lang_id)
 
     def set_phonemizer_language(self, lang_id):
-        self.text2phone = ArticulatoryCombinedTextFrontend(language=lang_id, add_silence_to_end=True)
+        self.text2phone = ArticulatoryCombinedTextFrontend(language=lang_id, add_silence_to_end=True,
+                                                           device=self.device)
 
     def set_accent_language(self, lang_id):
-        if self.use_lang_id:
-            self.lang_id = get_language_id(lang_id).to(self.device)
-        else:
-            self.lang_id = None
+        if lang_id in ['ajp', 'ajt', 'lak', 'lno', 'nul', 'pii', 'plj', 'slq', 'smd', 'snb', 'tpw', 'wya', 'zua',
+                       'en-us', 'en-sc', 'fr-be', 'fr-sw', 'pt-br', 'spa-lat', 'vi-ctr', 'vi-so']:
+            if lang_id == 'vi-so' or lang_id == 'vi-ctr':
+                lang_id = 'vie'
+            elif lang_id == 'spa-lat':
+                lang_id = 'spa'
+            elif lang_id == 'pt-br':
+                lang_id = 'por'
+            elif lang_id == 'fr-sw' or lang_id == 'fr-be':
+                lang_id = 'fra'
+            elif lang_id == 'en-sc' or lang_id == 'en-us':
+                lang_id = 'eng'
+            else:
+                # no clue where these others are even coming from, they are not in ISO 639-2
+                lang_id = 'eng'
+
+        self.lang_id = get_language_id(lang_id).to(self.device)
 
     def forward(self,
                 text,
@@ -130,20 +140,23 @@ class AnonFastSpeech2(torch.nn.Module):
                 pitch=None,
                 energy=None,
                 text_is_phonemes=False,
-                return_plot_as_filepath=False):
+                return_plot_as_filepath=False,
+                loudness_in_db=-29.0,
+                prosody_creativity=0.1):
         """
-        duration_scaling_factor: reasonable values are 0.5 < scale < 1.5.
+        duration_scaling_factor: reasonable values are 0.8 < scale < 1.2.
                                      1.0 means no scaling happens, higher values increase durations for the whole
                                      utterance, lower values decrease durations for the whole utterance.
-        pitch_variance_scale: reasonable values are 0.0 < scale < 2.0.
+        pitch_variance_scale: reasonable values are 0.6 < scale < 1.4.
                                   1.0 means no scaling happens, higher values increase variance of the pitch curve,
                                   lower values decrease variance of the pitch curve.
-        energy_variance_scale: reasonable values are 0.0 < scale < 2.0.
+        energy_variance_scale: reasonable values are 0.6 < scale < 1.4.
                                    1.0 means no scaling happens, higher values increase variance of the energy curve,
                                    lower values decrease variance of the energy curve.
         """
         with torch.inference_mode():
-            phones = self.text2phone.string_to_tensor(text, input_phonemes=text_is_phonemes).to(torch.device(self.device))
+            phones = self.text2phone.string_to_tensor(text, input_phonemes=text_is_phonemes).to(
+                torch.device(self.device))
             mel, durations, pitch, energy = self.phone2mel(phones,
                                                            return_duration_pitch_energy=True,
                                                            utterance_embedding=self.default_utterance_embedding,
@@ -154,8 +167,18 @@ class AnonFastSpeech2(torch.nn.Module):
                                                            duration_scaling_factor=duration_scaling_factor,
                                                            pitch_variance_scale=pitch_variance_scale,
                                                            energy_variance_scale=energy_variance_scale,
-                                                           pause_duration_scaling_factor=pause_duration_scaling_factor)
-            mel = mel.transpose(0, 1)
-            wave = self.mel2wav(mel)
+                                                           pause_duration_scaling_factor=pause_duration_scaling_factor,
+                                                           prosody_creativity=prosody_creativity)
 
-        return wave
+            wave = self.vocoder(mel.unsqueeze(0))
+            wave = wave.squeeze().cpu()
+        wave = wave.numpy()
+        sr = 24000
+        try:
+            loudness = self.meter.integrated_loudness(wave)
+            wave = pyloudnorm.normalize.loudness(wave, loudness, loudness_in_db)
+        except ValueError:
+            # if the audio is too short, a value error will arise
+            pass
+
+        return wave, sr
