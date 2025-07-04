@@ -1,6 +1,6 @@
 # Speaker Anonymization
 
-**This branch contains the code to our paper "First Steps Towards Voice Anonymization for Code-Switching Speech",
+**This branch contains the code to our paper ["First Steps Towards Voice Anonymization for Code-Switching Speech"](https://arxiv.org/abs/2507.01765),
 that has been accepted at Interspeech 2025.**
 
 This system is a code-switching extension of our multilingual model:
